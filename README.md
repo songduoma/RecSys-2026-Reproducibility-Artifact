@@ -1,449 +1,264 @@
-# RecSys 2026 Reproducibility Artifact
+<h2 align="center">
+Are We Really Making Progress in Group Recommendation?<br>
+Unmasking the Tie-Breaking Illusion
+</h2>
+
+<p align="center">
+<b>Song-Duo Ma, Pu-Jen Cheng</b>
+</p>
+
+<p align="center">
+National Taiwan University, Taipei, Taiwan
+</p>
+
+<p align="center">
+  <a href="https://doi.org/10.1145/3773078.3831853" target="_blank">
+    <img src="https://img.shields.io/badge/RecSys-2026-blue.svg?style=flat-square" alt="RecSys 2026">
+  </a>
+  <a href="https://arxiv.org/abs/xxxx.xxxxx" target="_blank">
+    <img src="https://img.shields.io/badge/arXiv-xxxx.xxxxx-b31b1b.svg?style=flat-square">
+  </a>
+
+</p>
 
 
-**Paper title:** *Are We Really Making Progress in Group Recommendation? Unmasking the Tie-Breaking Illusion* 
-**Track:** RecSys 2026 Reproducibility
+
+## Overview
+
+This repository contains the code and data for our paper on evaluation bias in group recommendation. We show that an extra sigmoid applied before the BPR loss can compress scores and create many exact ties, making HR@K and NDCG@K highly sensitive to deterministic tie-breaking. We revisit five recent methods and their baselines on CAMRa2011 and Mafengwo, introduce tie-aware evaluation that computes the exact expected metrics under uniform random tie-breaking, and show that several reported gains shrink substantially under this protocol. We further study the role of the extra sigmoid as implicit margin smoothing and explore temperature-scaled BPR as a simple mitigation.
+
+## What's in this repository
+
+- Full training/evaluation code for **ConsRec**, **AlignGroup**, **DHMAE**, **ITR**, **DGGVAE**, and the baselines **AGREE**, **GroupIM**, **HCR**, **HyperGroup**, **HHGR**, **CubeRec**, each patched with our tie-aware evaluator.
+- The tie-aware HR@K / NDCG@K implementation (exact expectation under uniform random tie-breaking, plus top-score tie statistics).
+- A simple code switch to restore the original pre-BPR sigmoid behavior for controlled comparison.
+
+```
+TieAwareGroupRec/
+├── WWW2023ConsRec/     ConsRec (WWW '23), incl. temperature-scaled BPR (τ-BPR)
+├── AlignGroup/          AlignGroup (CIKM '24)
+├── DHMAE/               DHMAE (SIGIR '24)
+├── ITR/                 ITR (NeurIPS '24)
+├── DGGVAE/               DGGVAE (TOIS '26)
+├── Baseline/            AGREE, GroupIM, HCR, HyperGroup, HHGR, CubeRec
+└── environment.yml
+```
+
+Each method folder is self-contained (data, model, and training scripts) and can be run independently of the others.
 
 
-This repository is the artifact package for the paper above. 
-It contains all code, datasets, and archived run logs needed to reproduce the reported findings on:
+## Requirements
 
-
-- evaluation inflation under deterministic tie-breaking,
-- tie-aware evaluation and tie statistics,
-- removing additional sigmoid,
-- temperature-scaled BPR (τ-BPR) mitigation.
-
-
-## 1) Artifact Checklist (Track Requirement Mapping)
-
-
-| Required item | Where in this artifact |
-|---|---|
-| Source code | `AlignGroup/`, `DHMAE/`, `ITR/`, `DGGVAE/`, `WWW2023ConsRec/`, `Baseline/` |
-| Data | `*/data/` (each method folder includes dataset files it uses) |
-| Installation instructions | Section **4) Installation** |
-| Hardware configuration | Section **5) Hardware Configuration** |
-| Reproduction instructions | Section **6) Reproduction** |
-
-
-## 2) Repository Structure
-
-
-- `WWW2023ConsRec/`: ConsRec (WWW 2023), plus τ-BPR experiments.
-- `AlignGroup/`: AlignGroup (CIKM 2024).
-- `DHMAE/`: DHMAE (SIGIR 2024).
-- `ITR/`: ITR (NeurIPS 2024).
-- `DGGVAE/`: DGGVAE (TOIS 2026).
-- `Baseline/`: AGREE, GroupIM, HCR, HyperGroup, HHGR, CubeRec.
-
-
-Result artifacts included in this artifact:
-
-
-- `log_original`: archived runs under the original evaluation/code setting.
-- `log_revised`: archived runs under the revised/corrected setting.
-- `log_tau_*`: archived temperature sweep runs for ConsRec.
-- `output_*_{original,revised}_seed*.log`: archived ITR per-seed stdout logs.
-- `metrics_tie_aware_*`: archived DHMAE per-seed tie-aware summaries.
-
-
-## 3) Data
-
-
-### 3.1 Datasets in the paper
-
-
-- `Mafengwo`
-- `CAMRa2011`
-
-
-Main files per dataset (same naming across methods):
-
-
-- `userRatingTrain.txt`, `userRatingTest.txt`, `userRatingNegative.txt`
-- `groupRatingTrain.txt`, `groupRatingTest.txt`, `groupRatingNegative.txt`
-- `groupMember.txt`
-
-
-### 3.2 Dataset statistics (paper-reported)
-
-
-| Dataset | Users | Items | Groups | User-item interactions | Group-item interactions |
-|---|---:|---:|---:|---:|---:|
-| Mafengwo | 5,275 | 1,513 | 995 | 39,761 | 3,595 |
-| CAMRa2011 | 602 | 7,710 | 290 | 116,344 | 145,068 |
-
-
-### 3.3 Notes
-
-
-- Train/test splits follow original codebases and are already prepared in the repository.
-- No external data download is required for the two main datasets.
-
-
-## 4) Installation
-
-
-### 4.1 Reproduction environment
-
+- Python 3.9
+- PyTorch 2.5.1 (CUDA 12.1)
+- `torch_geometric`, `numpy`, `scipy`, `scikit-learn`, `tensorboardX`
 
 ```bash
 conda env create -f environment.yml
 conda activate gr_reproducibility
 ```
 
-
-This environment uses Python 3.9 and the same package versions used in the original experiments, except that the Python micro-version is not pinned.
-
-
-The original experiments were run with Python 3.9.25. We specify python=3.9 in environment.yml instead of pinning the micro-version to improve portability across standard Conda channels.
+All experiments in the paper were conducted on Ubuntu 22.04 using single-precision (FP32) computation. We retain FP32 throughout because numerical precision interacts directly with the tie-inflation phenomenon studied in this work. environment.yml pins Python to 3.9 rather than a specific patch version for portability across Conda channels.
 
 
-### 4.2 Quick sanity checks
+## Reproducing the results
 
+Experiment outputs are not committed to this repository. Run the experiments below to regenerate the paper results. Generated logs remain local and are ignored by Git.
 
-```bash
-python -V
-python -c "import torch, numpy, scipy, sklearn, tensorboardX; print(torch.__version__)"
-python -c "import torch_geometric; print(torch_geometric.__version__)"
-python -c "import torch; print(torch.cuda.is_available(), torch.version.cuda, torch.cuda.device_count())"
-```
+## Running the experiments from scratch
 
-
-## 5) Hardware Configuration
-
-
-This section reports the actual machine used for experiments.
-
-
-### 5.1 Host and OS
-
-
-- Host type: local GPU server
-- OS: `Ubuntu 22.04.4 LTS (Jammy Jellyfish)`
-- Kernel: `Linux 5.15.0-107-generic`
-
-
-### 5.2 CPU and memory
-
-
-- CPU: `AMD EPYC 7313 16-Core Processor`
-- Sockets: `2`
-- Cores per socket: `16`
-- Threads per core: `2`
-- Total logical CPUs: `64`
-- System memory: `188 GiB`
-
-
-### 5.3 GPU
-
-
-- Driver version: `535.171.04`
-- CUDA (driver): `12.2`
-- CUDA used by PyTorch: `12.1`
-- Number of GPUs: `8`
-- GPU inventory:
-
-
-| GPU type | Count | Memory per GPU |
-|---|---:|---:|
-| NVIDIA GeForce RTX 3090 | 2 | 24 GB |
-| NVIDIA GeForce RTX 2080 Ti | 2 | 11 GB |
-| NVIDIA GeForce RTX 4090 | 1 | 24 GB |
-| NVIDIA RTX A5000 | 3 | 24 GB |
-
-
-Primary training GPUs for this paper were RTX 3090 and RTX A5000.
-
-
-### 5.4 Original experiment runtime
-
-
-- Python executable: Conda environment Python
-- Python version: `3.9.25`
-- PyTorch: `2.5.1+cu121`
-
-
-For artifact reproduction, `environment.yml` uses Python `3.9` without pinning the micro-version, as described in Section 4.
-
-
-## 6) Reproduction
-
-
-To inspect archived results without retraining, use each method's `print.py` and `print_aware.py` on the bundled log folders or use text files directly.
-
-
-## 6.1 Full rerun: Retrain and regenerate logs
-
-
-This mode is slower but regenerates experiment logs from code.
-
-
-### Common practice
-
-
-- Run each method from its own directory.
-- Use three seeds and average.
-- Store outputs separately for `original` vs `revised` runs.
-
-
-### 6.1.1 ConsRec (WWW2023ConsRec)
-
+<details>
+<summary><b>ConsRec (WWW '23)</b></summary>
 
 ```bash
 cd WWW2023ConsRec
 
-
 # Mafengwo
 for s in 0 1 2; do
- python -u main.py --dataset=Mafengwo --predictor=MLP --loss_type=BPR \
-   --learning_rate=0.0001 --device=cuda:0 --num_negatives=8 --layers=3 \
-   --epoch=200 --tau=1 --seed=$s
+  python -u main.py --dataset=Mafengwo --predictor=MLP --loss_type=BPR \
+    --learning_rate=0.0001 --device=cuda:0 --num_negatives=8 --layers=3 \
+    --epoch=200 --tau=1 --seed=$s
 done
-
 
 # CAMRa2011
 for s in 0 1 2; do
- python -u main.py --dataset=CAMRa2011 --predictor=DOT --loss_type=BPR \
-   --learning_rate=0.001 --device=cuda:0 --num_negatives=2 --layers=2 \
-   --epoch=30 --tau=1 --seed=$s
+  python -u main.py --dataset=CAMRa2011 --predictor=DOT --loss_type=BPR \
+    --learning_rate=0.001 --device=cuda:0 --num_negatives=2 --layers=2 \
+    --epoch=30 --tau=1 --seed=$s
 done
 ```
+</details>
 
-
-### 6.1.2 ITR
-
-
-```bash
-cd ITR
-
-
-for s in 0 1 2; do
- python -u main.py --dataset=CAMRa2011 --predictor=DOT --loss_type=BPR \
-   --learning_rate=0.001 --device=cuda:0 --num_negatives=2 --layers=2 \
-   --epoch=30 --seed=$s > output_camra2011_revised_seed${s}.log 2>&1
-done
-
-
-for s in 0 1 2; do
- python -u main.py --dataset=Mafengwo --predictor=MLP --loss_type=BPR \
-   --learning_rate=0.0001 --device=cuda:0 --num_negatives=8 --layers=3 \
-   --epoch=2000 --seed=$s > output_mafengwo_revised_seed${s}.log 2>&1
-done
-```
-
-
-### 6.1.3 AlignGroup
-
+<details>
+<summary><b>AlignGroup (CIKM '24)</b></summary>
 
 ```bash
 cd AlignGroup
 
-
-# Mafengwo (temp=[0.2])
+# Mafengwo (temp=0.2)
 for s in 0 1 2; do
- python -u main.py --dataset=Mafengwo --device=cuda:0 --seed=$s
+  python -u main.py --dataset=Mafengwo --device=cuda:0 --seed=$s
 done
 
-
-# CAMRa2011 (temp=[0.8])
+# CAMRa2011 (temp=0.8)
 for s in 0 1 2; do
- python -u main.py --dataset=CAMRa2011 --device=cuda:0 --seed=$s
+  python -u main.py --dataset=CAMRa2011 --device=cuda:0 --seed=$s
 done
 ```
+</details>
 
-
-### 6.1.4 DGGVAE
-
+<details>
+<summary><b>DGGVAE (TOIS '26)</b></summary>
 
 ```bash
 cd DGGVAE
 
-
-# Mafengwo default: k=[50], temp=[0.2]
+# Mafengwo defaults: k=50, temp=0.2
 for s in 0 1 2; do
- python -u main.py --dataset=Mafengwo --device=cuda:0 --seed=$s
+  python -u main.py --dataset=Mafengwo --device=cuda:0 --seed=$s
 done
 
-
-# CAMRa2011 default: k=[60], temp=[0.4]
-# Set these defaults in main.py before running CAMRa2011.
+# CAMRa2011 defaults: k=60, temp=0.4 (set in main.py before running)
 for s in 0 1 2; do
- python -u main.py --dataset=CAMRa2011 --device=cuda:0 --seed=$s
+  python -u main.py --dataset=CAMRa2011 --device=cuda:0 --seed=$s
 done
 ```
+</details>
 
-
-### 6.1.5 DHMAE
-
+<details>
+<summary><b>DHMAE (SIGIR '24)</b></summary>
 
 ```bash
 cd DHMAE
 
-
-# `run.sh` provides the base hyperparameter templates.
-# For paper-style reporting, run multiple seeds and average.
 for s in 0 1 2; do
- python -u main.py --dataset=CAMRa2011 --num_negatives=6 --num_enc_layers=1 \
-   --num_dec_layers=3 --sce_alpha=1 --drop_ratio=0.0 --epoch=30 \
-   --seed=$s --device=cuda:0
+  python -u main.py --dataset=CAMRa2011 --num_negatives=6 --num_enc_layers=1 \
+    --num_dec_layers=3 --sce_alpha=1 --drop_ratio=0.0 --epoch=30 \
+    --seed=$s --device=cuda:0
 done
 
-
 for s in 0 1 2; do
- python -u main.py --dataset=Mafengwo --num_negatives=10 --num_enc_layers=2 \
-   --num_dec_layers=3 --sce_alpha=2 --drop_ratio=0.1 --epoch=200 \
-   --seed=$s --device=cuda:0
+  python -u main.py --dataset=Mafengwo --num_negatives=10 --num_enc_layers=2 \
+    --num_dec_layers=3 --sce_alpha=2 --drop_ratio=0.1 --epoch=200 \
+    --seed=$s --device=cuda:0
 done
 ```
 
+`run.sh` gives the base hyperparameter templates; we average over three seeds for all paper-reported numbers.
+</details>
 
-### 6.1.6 Baselines
-
+<details>
+<summary><b>ITR (NeurIPS '24)</b></summary>
 
 ```bash
-# Run baseline methods with three seeds.
-# Logs are saved under each method's `log_rerun/` directory.
+cd ITR
 
+for s in 0 1 2; do
+  python -u main.py --dataset=CAMRa2011 --predictor=DOT --loss_type=BPR \
+    --learning_rate=0.001 --device=cuda:0 --num_negatives=2 --layers=2 \
+    --epoch=30 --seed=$s > output_camra2011_revised_seed${s}.log 2>&1
+done
 
+for s in 0 1 2; do
+  python -u main.py --dataset=Mafengwo --predictor=MLP --loss_type=BPR \
+    --learning_rate=0.0001 --device=cuda:0 --num_negatives=8 --layers=3 \
+    --epoch=2000 --seed=$s > output_mafengwo_revised_seed${s}.log 2>&1
+done
+```
+
+ITR writes to stdout by default; we redirect to `.log` files for bookkeeping.
+</details>
+
+<details>
+<summary><b>Baselines (AGREE, GroupIM, HyperGroup, HHGR, CubeRec, HCR)</b></summary>
+
+```bash
 SEEDS=(0 1 2)
 HHGR_SEEDS=(1111 1112 1113)
 
-
-# AGREE
 cd Baseline/AGREE
-mkdir -p log_rerun
 for s in "${SEEDS[@]}"; do
- python -u main.py --dataset=Mafengwo  --seed=$s --device=cuda:0 > log_rerun/mafengwo_seed${s}.log 2>&1
- python -u main.py --dataset=CAMRa2011 --seed=$s --device=cuda:0 > log_rerun/camra2011_seed${s}.log 2>&1
+  python -u main.py --dataset=Mafengwo  --seed=$s --device=cuda:0 > log_rerun/mafengwo_seed${s}.log 2>&1
+  python -u main.py --dataset=CAMRa2011 --seed=$s --device=cuda:0 > log_rerun/camra2011_seed${s}.log 2>&1
 done
 
-
-# GroupIM
 cd ../GroupIM
-mkdir -p log_rerun
 for s in "${SEEDS[@]}"; do
- python -u main.py --dataset=Mafengwo  --seed=$s --device=cuda:0 > log_rerun/mafengwo_seed${s}.log 2>&1
- python -u main.py --dataset=CAMRa2011 --seed=$s --device=cuda:0 > log_rerun/camra2011_seed${s}.log 2>&1
+  python -u main.py --dataset=Mafengwo  --seed=$s --device=cuda:0 > log_rerun/mafengwo_seed${s}.log 2>&1
+  python -u main.py --dataset=CAMRa2011 --seed=$s --device=cuda:0 > log_rerun/camra2011_seed${s}.log 2>&1
 done
 
-
-# HyperGroup
 cd ../HyperGroup
-mkdir -p log_rerun
 for s in "${SEEDS[@]}"; do
- python -u main.py --dataset=Mafengwo  --seed=$s --device=cuda:0 > log_rerun/mafengwo_seed${s}.log 2>&1
- python -u main.py --dataset=CAMRa2011 --seed=$s --device=cuda:0 > log_rerun/camra2011_seed${s}.log 2>&1
+  python -u main.py --dataset=Mafengwo  --seed=$s --device=cuda:0 > log_rerun/mafengwo_seed${s}.log 2>&1
+  python -u main.py --dataset=CAMRa2011 --seed=$s --device=cuda:0 > log_rerun/camra2011_seed${s}.log 2>&1
 done
 
-
-# HHGR
 cd ../HHGR
-mkdir -p log_rerun
 for s in "${HHGR_SEEDS[@]}"; do
- python -u main.py --dataset=Mafengwo  --seed=$s --device=cuda:0 > log_rerun/mafengwo_seed${s}.log 2>&1
- python -u main.py --dataset=CAMRa2011 --seed=$s --device=cuda:0 > log_rerun/camra2011_seed${s}.log 2>&1
+  python -u main.py --dataset=Mafengwo  --seed=$s --device=cuda:0 > log_rerun/mafengwo_seed${s}.log 2>&1
+  python -u main.py --dataset=CAMRa2011 --seed=$s --device=cuda:0 > log_rerun/camra2011_seed${s}.log 2>&1
 done
 
-
-# CubeRec
 cd ../CubeRec
-mkdir -p log_rerun
 for s in "${SEEDS[@]}"; do
- python -u main.py --dataset=Mafengwo  --seed=$s --device=cuda:0 --epoch=100 > log_rerun/mafengwo_seed${s}.log 2>&1
- python -u main.py --dataset=CAMRa2011 --seed=$s --device=cuda:0 --epoch=30 > log_rerun/camra2011_seed${s}.log 2>&1
+  python -u main.py --dataset=Mafengwo  --seed=$s --device=cuda:0 --epoch=100 > log_rerun/mafengwo_seed${s}.log 2>&1
+  python -u main.py --dataset=CAMRa2011 --seed=$s --device=cuda:0 --epoch=30  > log_rerun/camra2011_seed${s}.log 2>&1
 done
-
-
-cd ../..
 ```
 
+`HCR` reads its hyperparameters from `Baseline/HCR/config.py` rather than argparse — switch datasets by editing `self.path` before running `python main.py`.
+</details>
 
-`HCR` reads hyperparameters from `Baseline/HCR/config.py` (not argparse). 
-Switch dataset by editing `self.path` in `config.py` before `python main.py`.
-
-
-## 6.2 Original vs revised model switch (for methods with additional sigmoid issue)
-
-
-In this repository, the revised code path is active by default for the affected methods.
-
-
-Here, “revised” refers to retraining/evaluating models after removing the additional sigmoid applied to item scores before the BPR objective. It is not merely a post-hoc evaluation change.
-
-
-To rerun the “original” behavior, re-enable the sigmoid at these locations:
-
-
-- `AlignGroup/model.py`
-- `WWW2023ConsRec/model.py`
-- `ITR/model.py`
-- `DGGVAE/model.py`
-- `DHMAE/model.py`
-- `Baseline/AGREE/model.py`
-- `Baseline/HCR/model.py`
-- `Baseline/HyperGroup/model.py`
-
-
-`GroupIM`, `HHGR`, and `CubeRec` are not part of this pre-BPR sigmoid switch.
-
-
-Archived original logs are already bundled, so this manual switch is optional unless you need full reruns from scratch.
-
-
-## 6.3 Temperature-scaled BPR (τ-BPR) experiment (Table 6 / Figure 2)
-
+<details>
+<summary><b>Temperature-scaled BPR sweep (Table 6 / Figure 2)</b></summary>
 
 ```bash
 cd WWW2023ConsRec
 for tau in 1 2 4 8 16 32 64; do
- for seed in 0 1 2; do
-   python -u main.py --dataset=Mafengwo --predictor=MLP --loss_type=BPR \
-     --learning_rate=0.0001 --device=cuda:0 --num_negatives=8 --layers=3 \
-     --epoch=200 --tau=$tau --seed=$seed
- done
+  for seed in 0 1 2; do
+    python -u main.py --dataset=Mafengwo --predictor=MLP --loss_type=BPR \
+      --learning_rate=0.0001 --device=cuda:0 --num_negatives=8 --layers=3 \
+      --epoch=200 --tau=$tau --seed=$seed
+  done
 done
 ```
 
+Sweep logs are generated locally under `WWW2023ConsRec/log_tau_*` and are ignored by Git.
+</details>
 
-Archived sweep logs are in `WWW2023ConsRec/log_tau_*`.
+## Original vs. revised (no-extra-sigmoid) implementations
 
+The code in this repository defaults to the **revised** path (extra sigmoid removed) for every affected method. To reproduce the original, buggy behavior — e.g. to regenerate `log_original` from scratch — re-enable the sigmoid in:
 
-## 6.4 Mapping to paper claims
+`AlignGroup/model.py`, `WWW2023ConsRec/model.py`, `ITR/model.py`, `DGGVAE/model.py`, `DHMAE/model.py`, `Baseline/AGREE/model.py`, `Baseline/HCR/model.py`, `Baseline/HyperGroup/model.py`.
 
+(`GroupIM`, `HHGR`, and `CubeRec` never had this issue and are unaffected by the switch.) Experiment outputs are generated locally and are ignored by Git.
 
-- **Inflation under original protocol (Table 3):** compare `print.py` vs `print_aware.py` on `log_original` (or `output_*_original_*` / DHMAE original txt).
-- **Tie size vs drop correlation (Table 4, Figure 1):** use `metrics_tie_aware` log lines (`num of top-score tie`, `top-score tie ratio`, `samples with tied top`).
-- **Removing sigmoid / corrected comparison (Table 5):** evaluate `log_revised` (or equivalent revised outputs).
-- **τ-BPR mitigation (Table 6, Figure 2):** use `WWW2023ConsRec/log_tau_*` or rerun Section 6.3.
+## Notes
 
+- A few scripts declare list-valued hyperparameters via `argparse(..., type=list, ...)`; the dataset-specific values used for the paper are set as code defaults rather than passed on the command line.
 
-## 7) Expected Output Format
+## Acknowledgments
 
+This work builds directly on the official implementations of [ConsRec](https://github.com/FDUDSDE/WWW2023ConsRec), [AlignGroup](https://github.com/Jinfeng-Xu/AlignGroup), [DHMAE](https://github.com/ICharlotteI/DHMAE), [ITR](https://github.com/yueliu1999/ITR), [DGGVAE](https://github.com/Jinfeng-Xu/DGGVAE), and the [group recommendation baselines](https://github.com/FDUDSDE/WWW2023GroupRecBaselines) released alongside ConsRec. We thank the respective authors for making their code public. This work was supported by the National Science and Technology Council (NSTC), Taiwan, under Grant NSTC 115-2634-F-001-006.
 
-Parser scripts report best-epoch metrics in this form:
+## Citation
 
+```bibtex
+@inproceedings{ma2026tieaware,
+  title     = {Are We Really Making Progress in Group Recommendation? Unmasking the Tie-Breaking Illusion},
+  author    = {Ma, Song-Duo and Cheng, Pu-Jen},
+  booktitle = {Proceedings of the 20th ACM Conference on Recommender Systems (RecSys '26)},
+  year      = {2026},
+  address   = {Minneapolis, MN, USA},
+  publisher = {ACM},
+  doi       = {10.1145/3773078.3831853}
+}
+```
 
-- Group/User `Hit@[1,5,10]`
-- Group/User `NDCG@[1,5,10]`
-- For tie-aware logs: top-score tie statistics are printed during evaluation.
+If you use the reproduced baseline or method implementations, please also cite the corresponding original papers (ConsRec, AlignGroup, DHMAE, ITR, DGGVAE, and the respective baselines).
 
+## License
 
-These outputs are sufficient to reconstruct the tables/figures discussed above.
-
-
-## 8) Known Notes
-
-
-- Several scripts use `argparse(..., type=list, ...)` for hyperparameter lists.
- Dataset-specific list settings in paper runs were set directly in code defaults.
-- `HCR` uses `config.py` instead of command-line args.
-- `ITR` writes to stdout by default; redirect to `.log` files for easier bookkeeping.
-- `DHMAE` archived original/revised seed results are already provided as text summaries.
-
-
-## 9) Citation
-
-
-If you use this artifact, please cite the main paper and corresponding base model papers (AlignGroup, DHMAE, ITR, DGGVAE, ConsRec, and baselines) as appropriate.
+Code in this repository is released for research use; the paper itself is licensed under [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/). Portions derived from the original method/baseline codebases retain their upstream licenses — see each subfolder for details.
