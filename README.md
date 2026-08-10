@@ -55,17 +55,14 @@ Each method folder is self-contained (data, model, and training scripts) and can
 
 ```bash
 conda env create -f environment.yml
-conda activate gr_reproducibility
+conda activate TieAwareGroupRec
 ```
 
 All experiments in the paper were conducted on Ubuntu 22.04 using single-precision (FP32) computation. We retain FP32 throughout because numerical precision interacts directly with the tie-inflation phenomenon studied in this work. environment.yml pins Python to 3.9 rather than a specific patch version for portability across Conda channels.
 
 
-## Reproducing the results
 
-Experiment outputs are not committed to this repository. Run the experiments below to regenerate the paper results. Generated logs remain local and are ignored by Git.
-
-## Running the experiments from scratch
+## Running the experiments
 
 <details>
 <summary><b>ConsRec (WWW '23)</b></summary>
@@ -174,7 +171,6 @@ ITR writes to stdout by default; we redirect to `.log` files for bookkeeping.
 
 ```bash
 SEEDS=(0 1 2)
-HHGR_SEEDS=(1111 1112 1113)
 
 cd Baseline/AGREE
 for s in "${SEEDS[@]}"; do
@@ -195,7 +191,7 @@ for s in "${SEEDS[@]}"; do
 done
 
 cd ../HHGR
-for s in "${HHGR_SEEDS[@]}"; do
+for s in "${SEEDS[@]}"; do
   python -u main.py --dataset=Mafengwo  --seed=$s --device=cuda:0 > log_rerun/mafengwo_seed${s}.log 2>&1
   python -u main.py --dataset=CAMRa2011 --seed=$s --device=cuda:0 > log_rerun/camra2011_seed${s}.log 2>&1
 done
@@ -211,7 +207,7 @@ done
 </details>
 
 <details>
-<summary><b>Temperature-scaled BPR sweep (Table 6 / Figure 2)</b></summary>
+<summary><b>Temperature-scaled BPR sweep</b></summary>
 
 ```bash
 cd WWW2023ConsRec
@@ -224,7 +220,6 @@ for tau in 1 2 4 8 16 32 64; do
 done
 ```
 
-Sweep logs are generated locally under `WWW2023ConsRec/log_tau_*` and are ignored by Git.
 </details>
 
 ## Original vs. revised (no-extra-sigmoid) implementations
@@ -233,7 +228,7 @@ The code in this repository defaults to the **revised** path (extra sigmoid remo
 
 `AlignGroup/model.py`, `WWW2023ConsRec/model.py`, `ITR/model.py`, `DGGVAE/model.py`, `DHMAE/model.py`, `Baseline/AGREE/model.py`, `Baseline/HCR/model.py`, `Baseline/HyperGroup/model.py`.
 
-(`GroupIM`, `HHGR`, and `CubeRec` never had this issue and are unaffected by the switch.) Experiment outputs are generated locally and are ignored by Git.
+(`GroupIM`, `HHGR`, and `CubeRec` never had this issue and are unaffected by the switch.) 
 
 ## Notes
 
@@ -258,7 +253,3 @@ This work builds directly on the official implementations of [ConsRec](https://g
 ```
 
 If you use the reproduced baseline or method implementations, please also cite the corresponding original papers (ConsRec, AlignGroup, DHMAE, ITR, DGGVAE, and the respective baselines).
-
-## License
-
-Code in this repository is released for research use; the paper itself is licensed under [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/). Portions derived from the original method/baseline codebases retain their upstream licenses — see each subfolder for details.
