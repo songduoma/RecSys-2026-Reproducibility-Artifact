@@ -15,8 +15,8 @@ National Taiwan University, Taipei, Taiwan
   <a href="https://doi.org/10.1145/3773078.3831853" target="_blank">
     <img src="https://img.shields.io/badge/RecSys-2026-blue.svg?style=flat-square" alt="RecSys 2026">
   </a>
-  <a href="https://arxiv.org/abs/xxxx.xxxxx" target="_blank">
-    <img src="https://img.shields.io/badge/arXiv-xxxx.xxxxx-b31b1b.svg?style=flat-square">
+  <a href="https://arxiv.org/abs/2608.11190" target="_blank">
+    <img src="https://img.shields.io/badge/arXiv-2608.11190-b31b1b.svg?style=flat-square">
   </a>
 
 </p>
@@ -224,11 +224,11 @@ done
 
 ## Original vs. revised (no-extra-sigmoid) implementations
 
-The code in this repository defaults to the **revised** path (extra sigmoid removed) for every affected method. To reproduce the original, buggy behavior — e.g. to regenerate `log_original` from scratch — re-enable the sigmoid in:
+The code in this repository defaults to the **revised** path (extra sigmoid removed) for every affected method. To reproduce the original, buggy behavior for comparison, re-enable the sigmoid in:
 
 `AlignGroup/model.py`, `WWW2023ConsRec/model.py`, `ITR/model.py`, `DGGVAE/model.py`, `DHMAE/model.py`, `Baseline/AGREE/model.py`, `Baseline/HCR/model.py`, `Baseline/HyperGroup/model.py`.
 
-(`GroupIM`, `HHGR`, and `CubeRec` never had this issue and are unaffected by the switch.) 
+(`GroupIM`, `HHGR`, and `CubeRec` never had this issue and are unaffected by the switch.)
 
 ## Notes
 
